@@ -62,3 +62,47 @@ export async function insertRental(req, res) {
         res.status(500).send(err.message)
     }
 }
+
+export async function returnRental(req, res) {
+    const id = parseInt(req.params.id)
+    const returnDate = new Date().toISOString().slice(0, 10)
+
+    try {
+        const checkRentals = await db.query(`SELECT * FROM rentals WHERE id=$1`, [id])
+        const rental = checkRentals.rows[0]
+
+        if (rental.returnDate !== null) return res.sendStatus(400)
+
+        const rentDate = new Date(rental.rentDate)
+        const daysRented = rental.daysRented
+        const expectedReturnDate = new Date(rentDate.getTime() + daysRented * 24 * 60 * 60 * 1000)
+        const delayInDays = Math.round((new Date(returnDate) - expectedReturnDate) / (24 * 60 * 60 * 1000))
+
+        const originalPrice = rental.originalPrice
+        const delayFee = delayInDays > 0 ? delayInDays * (originalPrice / daysRented) : null
+
+        await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`,
+            [returnDate, delayFee, id])
+
+        res.sendStatus(200)
+    } catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
+export async function deleteRental(req, res) {
+    const id = parseInt(req.params.id)
+
+    try{
+        const checkRentals = await db.query(`SELECT * FROM rentals WHERE id=$1`, [id])
+
+        if (checkRentals.rows.length === 0) return res.sendStatus(404)
+        if (checkRentals.rows[0].returnDate === null) return res.sendStatus(400)
+
+        await db.query(`DELETE FROM rentals WHERE id=$1`, [id])
+
+        res.sendStatus(200)
+    } catch (err) {
+        res.status(500).send(err.message)
+    }
+}
