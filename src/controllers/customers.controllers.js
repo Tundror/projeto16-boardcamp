@@ -22,7 +22,7 @@ export async function getCustomersById(req, res) {
     try {
         const customers = await db.query(`SELECT * FROM customers WHERE id=$1;`, [id])
 
-        if(customers.rows.length === 0) return res.sendStatus(404)
+        if (customers.rows.length === 0) return res.sendStatus(404)
 
         const formattedCustomers = customers.rows.map(customer => {
             const formattedBirthday = customer.birthday.toISOString().substring(0, 10);
@@ -49,6 +49,25 @@ export async function insertCustomer(req, res) {
             [name, phone, cpf, birthday])
 
         res.sendStatus(201)
+    } catch (err) {
+        res.status(500).send(err.message)
+    }
+}
+
+export async function updateCustomer(req, res) {
+    const { name, phone, cpf, birthday } = req.body
+    const id = parseInt(req.params.id)
+
+    try {
+        const checkCpf = await db.query(`SELECT * FROM customers WHERE cpf=$1 AND id <> $2`, [cpf, id])
+        if (checkCpf.rows.length !== 0) return res.sendStatus(409)
+
+        await db.query(`UPDATE customers 
+        SET name=$2, phone=$3, cpf=$4, birthday=$5 
+        WHERE id=$1`,
+            [id, name, phone, cpf, birthday])
+
+        res.sendStatus(200)
     } catch (err) {
         res.status(500).send(err.message)
     }
