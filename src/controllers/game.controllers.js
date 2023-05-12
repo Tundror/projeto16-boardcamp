@@ -13,7 +13,6 @@ export async function getGames(req, res) {
 
 export async function insertGame(req, res) {
     const { name, image, stockTotal, pricePerDay } = req.body
-    if (stockTotal <= 0 || pricePerDay <= 0) return sendStatus(400)
     try {
         const checkName = await db.query(`SELECT * FROM games WHERE name=$1`, [name])
         if (checkName.rows.length !== 0) return res.sendStatus(409)
